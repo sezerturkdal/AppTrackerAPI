@@ -1,4 +1,5 @@
 ﻿using System;
+using System.Net.NetworkInformation;
 using AppTrackerAPI.DTOs;
 using AppTrackerAPI.Models;
 using Microsoft.EntityFrameworkCore;
@@ -17,6 +18,7 @@ namespace AppTrackerAPI.Repositories
         public async Task<IEnumerable<ApplicationDto>> GetAll()
         {
             return await _context.Applications
+                .AsNoTracking()
                 .Include(a => a.StatusLevel)   
                 .Include(a => a.Inquiries) 
                 .Select(a => new ApplicationDto
@@ -60,6 +62,7 @@ namespace AppTrackerAPI.Repositories
         public async Task<ApplicationDto> GetById(int id)
         {
             var application = await _context.Applications
+                .AsNoTracking()
                 .Include(a => a.StatusLevel)   
                 .Include(a => a.Inquiries)    
                 .FirstOrDefaultAsync(a => a.Id == id);
@@ -107,13 +110,38 @@ namespace AppTrackerAPI.Repositories
 
         public async Task Add(Application application)
         {
-            _context.Applications.Add(application);
+            Application newApplication = new Application()
+            {
+                AppStatus = "New",
+                ProjectRef = Guid.NewGuid().ToString("N").Substring(0, 6),   // Unique reference code for each application
+                ProjectName = application.ProjectName,
+                ProjectLocation = application.ProjectLocation,
+                OpenDt = DateTime.Now,
+                ProjectValue = application.ProjectValue,
+                StatusId = 1,
+                Notes = application.Notes,
+                IsDeleted = false
+            };
+            _context.Applications.Add(newApplication);
             await _context.SaveChangesAsync();
         }
 
         public async Task Update(Application application)
         {
-            _context.Entry(application).State = EntityState.Modified;
+            var app = await _context.Applications.FirstOrDefaultAsync(x=>x.Id==application.Id);
+            if (app != null)
+            {
+                app.Modified = DateTime.Now;
+                app.AppStatus = application?.StatusLevel != null
+                                ? StatusHelper.GetStatusName(application.StatusLevel.Id)
+                                : app.AppStatus;
+                app.ProjectName = application?.ProjectName;
+                app.ProjectLocation = application?.ProjectLocation;
+                app.ProjectValue = application?.ProjectValue;
+                app.Notes = application?.Notes;
+                app.StartDt = application?.StatusLevel?.Id != 4 ? DateTime.Now : null; // When the status changes to 4 (In Progress), it indicates that the application has started
+                app.StatusId = application?.StatusLevel?.Id ?? app.StatusId;
+            }
             await _context.SaveChangesAsync();
         }
 
@@ -125,6 +153,16 @@ namespace AppTrackerAPI.Repositories
                 _context.Applications.Remove(application);
                 await _context.SaveChangesAsync();
             }
+            /*
+             Codes for soft delete are here:
+
+            var application = await _context.Applications.FindAsync(id);
+            if (application != null)
+            {
+                application.IsDeleted = true;
+                await _context.SaveChangesAsync();
+            }
+            */
         }
     }
 

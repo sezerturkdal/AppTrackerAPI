@@ -30,19 +30,16 @@ namespace AppTrackerAPI.Controllers
             return app != null ? Ok(app) : NotFound();
         }
 
-        [HttpPost("AddApplication")]
-        public async Task<IActionResult> AddApplication([FromBody] Application application)
+        [HttpPost("CreateApplication")]
+        public async Task<IActionResult> CreateApplication([FromBody] Application application)
         {
-            await _service.AddApplication(application);
+            await _service.CreateApplication(application);
             return CreatedAtAction(nameof(GetApplicationById), new { id = application.Id }, application);
         }
 
-        [HttpPut("UpdateApplication/{id}")]
-        public async Task<IActionResult> UpdateApplication(int id, [FromBody] Application application)
+        [HttpPut("UpdateApplication")]
+        public async Task<IActionResult> UpdateApplication([FromBody] Application application)
         {
-            if (id != application.Id)
-                return BadRequest();
-
             await _service.UpdateApplication(application);
             return NoContent();
         }

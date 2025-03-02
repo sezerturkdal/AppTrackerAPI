@@ -8,7 +8,7 @@ namespace AppTrackerAPI.Models
     public class StatusLevel
     {
         public int Id { get; set; }
-        public string StatusName { get; set; }
+        public string? StatusName { get; set; }
     }
 
 }
